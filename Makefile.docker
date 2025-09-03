@@ -1,0 +1,111 @@
+# Microsoft Teams MCP Server - Docker Makefile
+
+# Variables
+IMAGE_NAME := teams-mcp-server
+IMAGE_TAG := latest
+CONTAINER_NAME := teams-mcp-server
+PORT := 8003
+
+# Docker commands
+.PHONY: build run stop clean logs shell test health
+
+# Build the Docker image
+build:
+	@echo "Building Docker image..."
+	docker build -t $(IMAGE_NAME):$(IMAGE_TAG) .
+
+# Run the container with docker-compose
+up:
+	@echo "Starting services with docker-compose..."
+	docker-compose up -d
+
+# Stop docker-compose services
+down:
+	@echo "Stopping services..."
+	docker-compose down
+
+# Run the container directly
+run:
+	@echo "Running container on port $(PORT)..."
+	docker run -d \
+		--name $(CONTAINER_NAME) \
+		-p $(PORT):8003 \
+		--env-file .env \
+		$(IMAGE_NAME):$(IMAGE_TAG)
+
+# Stop and remove the container
+stop:
+	@echo "Stopping container..."
+	-docker stop $(CONTAINER_NAME)
+	-docker rm $(CONTAINER_NAME)
+
+# View logs
+logs:
+	@echo "Viewing logs..."
+	docker-compose logs -f teams-mcp-server
+
+# View container logs (direct run)
+logs-container:
+	@echo "Viewing container logs..."
+	docker logs -f $(CONTAINER_NAME)
+
+# Get a shell in the running container
+shell:
+	@echo "Opening shell in container..."
+	docker exec -it $(CONTAINER_NAME) /bin/bash
+
+# Clean up images and containers
+clean:
+	@echo "Cleaning up..."
+	-docker stop $(CONTAINER_NAME)
+	-docker rm $(CONTAINER_NAME)
+	-docker rmi $(IMAGE_NAME):$(IMAGE_TAG)
+	docker system prune -f
+
+# Test the health endpoint
+health:
+	@echo "Testing health endpoint..."
+	curl -f http://localhost:$(PORT)/health || echo "Health check failed"
+
+# Development commands
+dev-setup:
+	@echo "Setting up development environment..."
+	cp .env.example .env
+	@echo "Please edit .env with your Microsoft OAuth credentials"
+
+# Build and run in one command
+dev: build run
+	@echo "Development environment started"
+	@echo "Access the server at http://localhost:$(PORT)"
+	@echo "Health check: http://localhost:$(PORT)/health"
+
+# Production deployment
+prod: build
+	@echo "Deploying to production..."
+	docker-compose -f docker-compose.yml up -d
+	@echo "Production deployment complete"
+
+# Show help
+help:
+	@echo "Microsoft Teams MCP Server - Docker Commands"
+	@echo ""
+	@echo "Development:"
+	@echo "  make dev-setup    - Setup development environment"
+	@echo "  make build        - Build Docker image"
+	@echo "  make dev          - Build and run for development"
+	@echo ""
+	@echo "Docker Compose:"
+	@echo "  make up           - Start services with docker-compose"
+	@echo "  make down         - Stop services"
+	@echo "  make logs         - View logs"
+	@echo ""
+	@echo "Direct Docker:"
+	@echo "  make run          - Run container directly"
+	@echo "  make stop         - Stop and remove container"
+	@echo "  make logs-container - View container logs"
+	@echo ""
+	@echo "Utilities:"
+	@echo "  make shell        - Get shell in container"
+	@echo "  make health       - Test health endpoint"
+	@echo "  make clean        - Clean up containers and images"
+	@echo "  make help         - Show this help"

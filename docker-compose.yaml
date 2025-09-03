@@ -1,0 +1,43 @@
+services:
+  teams-mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${TEAMS_MCP_PORT:-8003}:8003"
+    environment:
+      # Microsoft OAuth Configuration
+      - MICROSOFT_OAUTH_CLIENT_ID=${MICROSOFT_OAUTH_CLIENT_ID}
+      - MICROSOFT_OAUTH_CLIENT_SECRET=${MICROSOFT_OAUTH_CLIENT_SECRET}
+      - MICROSOFT_TENANT_ID=${MICROSOFT_TENANT_ID:-common}
+      
+      # Server Configuration
+      - TEAMS_MCP_BASE_URI=${TEAMS_MCP_BASE_URI:-http://localhost}
+      - MICROSOFT_OAUTH_REDIRECT_URI=${MICROSOFT_OAUTH_REDIRECT_URI:-http://localhost:8003/oauth2callback}
+      
+      # OAuth 2.1 Settings
+      - MCP_ENABLE_OAUTH21=true
+      - OAUTH2_ALLOW_INSECURE_TRANSPORT=${OAUTH2_ALLOW_INSECURE_TRANSPORT:-false}
+      
+      # Development Settings
+      - SKIP_AUTH=${SKIP_AUTH:-false}
+      
+      # Logging
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    
+    volumes:
+      # Persist credentials
+      - teams_mcp_credentials:/app/.microsoft_teams_mcp/credentials
+      
+    restart: unless-stopped
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  teams_mcp_credentials:
+    driver: local
