@@ -1,12 +1,12 @@
-# Microsoft Teams MCP Server 전체 아키텍처 분석
+# Microsoft Teams MCP Server - Complete Architecture Analysis
 
-## 1. 개요
+## 1. Overview
 
-Microsoft Teams MCP Server는 Model Context Protocol(MCP)를 통해 Microsoft Teams와 Microsoft Graph API를 연동하는 서버입니다. 이 서버는 사용자 인증, 세션 관리, 그리고 Teams API 접근을 위한 OAuth 2.1 기반의 보안 아키텍처를 제공합니다.
+The Microsoft Teams MCP Server is a server that integrates Microsoft Teams with Microsoft Graph API through the Model Context Protocol (MCP). This server provides a security architecture based on OAuth 2.1 for user authentication, session management, and Teams API access.
 
-## 2. 전체 아키텍처
+## 2. Overall Architecture
 
-### 2.1 핵심 컴포넌트
+### 2.1 Core Components
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -37,13 +37,13 @@ Microsoft Teams MCP Server는 Model Context Protocol(MCP)를 통해 Microsoft Te
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## 3. 인증 시스템 분석
+## 3. Authentication System Analysis
 
-### 3.1 OAuth 2.1 기반 인증 흐름
+### 3.1 OAuth 2.1 Based Authentication Flow
 
-Microsoft Teams MCP Server는 **OAuth 2.1**을 사용하여 Microsoft Graph API에 인증합니다.
+The Microsoft Teams MCP Server uses **OAuth 2.1** to authenticate with the Microsoft Graph API.
 
-#### 인증 흐름:
+#### Authentication Flow:
 
 ```mermaid
 sequenceDiagram
@@ -71,15 +71,15 @@ sequenceDiagram
     Server->>Client: Tool Response
 ```
 
-### 3.2 세션 관리 시스템
+### 3.2 Session Management System
 
-#### OAuth21SessionStore 클래스:
-- **다중 사용자 세션 관리**: 각 사용자의 OAuth 토큰을 별도로 저장
-- **세션 바인딩**: MCP 세션 ID와 사용자 이메일을 바인딩하여 보안 강화
-- **불변 바인딩**: 한 번 바인딩된 세션은 다른 사용자로 변경 불가 (보안)
+#### OAuth21SessionStore Class:
+- **Multi-user Session Management**: Stores each user's OAuth tokens separately
+- **Session Binding**: Binds MCP session IDs to user emails for enhanced security
+- **Immutable Binding**: Once bound, sessions cannot be changed to different users (security)
 
 ```python
-# 세션 저장 구조
+# Session Storage Structure
 {
     "user_email": {
         "access_token": "...",
@@ -90,20 +90,20 @@ sequenceDiagram
     }
 }
 
-# 세션 바인딩 (보안 계층)
+# Session Binding (Security Layer)
 {
-    "mcp_session_id": "user_email",  # 불변 바인딩
+    "mcp_session_id": "user_email",  # Immutable binding
     "oauth_session_id": "user_email"
 }
 ```
 
-### 3.3 인증 보안 검증
+### 3.3 Authentication Security Validation
 
-서버는 3단계 보안 검증을 수행합니다:
+The server performs three-tier security validation:
 
-1. **JWT 토큰 검증** (최우선): 요청 헤더의 Bearer 토큰에서 이메일 추출
-2. **세션 바인딩 검증**: 세션 ID가 특정 사용자에게 바인딩되어 있는지 확인
-3. **MCP 세션 매핑**: FastMCP 세션과 사용자 매핑 확인
+1. **JWT Token Validation** (highest priority): Extract email from Bearer token in request headers
+2. **Session Binding Validation**: Check if session ID is bound to a specific user
+3. **MCP Session Mapping**: Verify FastMCP session to user mapping
 
 ```python
 def get_credentials_with_validation(
@@ -111,73 +111,73 @@ def get_credentials_with_validation(
     session_id: Optional[str] = None,
     auth_token_email: Optional[str] = None
 ) -> Optional[MicrosoftCredentials]:
-    # 1. JWT 토큰 검증 (최고 우선순위)
+    # 1. JWT Token Validation (highest priority)
     if auth_token_email:
         if auth_token_email != requested_user_email:
-            # 보안 위반: 다른 사용자 크리덴셜 접근 시도
+            # Security violation: Attempt to access different user's credentials
             return None
     
-    # 2. 세션 바인딩 검증
+    # 2. Session Binding Validation
     if session_id:
         bound_user = self._session_auth_binding.get(session_id)
         if bound_user and bound_user != requested_user_email:
-            # 보안 위반: 바인딩된 세션이 다른 사용자 접근 시도
+            # Security violation: Bound session attempting to access different user
             return None
 ```
 
-## 4. Transport 모드 분석
+## 4. Transport Mode Analysis
 
-### 4.1 Streamable-HTTP 모드
+### 4.1 Streamable-HTTP Mode
 
-**특징:**
-- FastAPI 기반 HTTP 서버로 동작
-- CORS 미들웨어 내장으로 브라우저 지원
-- RESTful API 엔드포인트 제공
-- 세션 미들웨어 스택 적용
+**Features:**
+- Operates as FastAPI-based HTTP server
+- Built-in CORS middleware for browser support
+- Provides RESTful API endpoints
+- Applies session middleware stack
 
-**주요 엔드포인트:**
-- `GET /health`: 서버 상태 확인
-- `GET /callback`: OAuth 콜백 처리
-- `POST /start_auth`: 인증 흐름 시작
-- `POST /mcp/*`: MCP 도구 호출
+**Key Endpoints:**
+- `GET /health`: Server status check
+- `GET /callback`: OAuth callback handling
+- `POST /start_auth`: Authentication flow initiation
+- `POST /mcp/*`: MCP tool calls
 
-**미들웨어 스택:**
+**Middleware Stack:**
 ```python
-# 1. MCPSessionMiddleware (세션 추출 및 컨텍스트 설정)
-# 2. AuthInfoMiddleware (인증 정보 주입)
-# 3. CORSMiddleware (CORS 처리 - FastMCP 내장)
+# 1. MCPSessionMiddleware (session extraction and context setting)
+# 2. AuthInfoMiddleware (authentication info injection)
+# 3. CORSMiddleware (CORS handling - built into FastMCP)
 ```
 
-### 4.2 STDIO 모드
+### 4.2 STDIO Mode
 
-**특징:**
-- 표준 입출력을 통한 MCP 통신
-- 별도 OAuth 콜백 서버 실행 (포트 8000)
-- 터미널/콘솔 환경에서 주로 사용
+**Features:**
+- MCP communication through standard input/output
+- Separate OAuth callback server (port 8000)
+- Primarily used in terminal/console environments
 
-## 5. 세션 지속성 분석
+## 5. Session Persistence Analysis
 
-### 5.1 토큰 만료 관리
+### 5.1 Token Expiration Management
 
 **Access Token:**
-- 기본 만료 시간: **1시간** (Microsoft Graph API 기본값)
-- 자동 갱신: Refresh Token을 사용한 자동 갱신 지원
+- Default expiration: **1 hour** (Microsoft Graph API default)
+- Auto-refresh: Supports automatic renewal using Refresh Token
 
 **Refresh Token:**
-- 만료 시간: **90일** (Microsoft 기본값)
-- 조건부 갱신: 사용 시마다 새로운 Refresh Token 발급 가능
+- Expiration: **90 days** (Microsoft default)
+- Conditional renewal: New Refresh Token may be issued upon use
 
-**세션 지속성:**
+**Session Persistence:**
 ```python
 @property
 def expired(self):
-    """토큰 만료 확인"""
+    """Check token expiration"""
     if not self.expiry:
         return True
     return datetime.now() >= self.expiry
 
 def refresh(self, request=None):
-    """Refresh Token을 사용한 토큰 갱신"""
+    """Token renewal using Refresh Token"""
     app = msal.ConfidentialClientApplication(
         client_id=self.client_id,
         client_credential=self.client_secret,
@@ -190,22 +190,22 @@ def refresh(self, request=None):
     )
 ```
 
-### 5.2 영구 저장소
+### 5.2 Persistent Storage
 
-**크리덴셜 저장:**
-- 위치: `~/.microsoft_teams_mcp/credentials/`
-- 형식: JSON 파일
-- Docker 볼륨: `teams_mcp_credentials` 볼륨으로 영구 저장
+**Credential Storage:**
+- Location: `~/.microsoft_teams_mcp/credentials/`
+- Format: JSON files
+- Docker Volume: Persistent storage via `teams_mcp_credentials` volume
 
 ## 6. Microsoft Graph API Scopes
 
-### 6.1 범위 정의
+### 6.1 Scope Definitions
 
 ```python
-# 기본 사용자 정보
+# Basic user information
 USER_READ_SCOPE = 'https://graph.microsoft.com/User.Read'
 
-# Teams 관련 권한
+# Teams-related permissions
 TEAMS_READ_SCOPE = 'https://graph.microsoft.com/Team.ReadBasic.All'
 TEAMS_CHANNELS_READ_SCOPE = 'https://graph.microsoft.com/Channel.ReadBasic.All' 
 TEAMS_MESSAGES_READ_SCOPE = 'https://graph.microsoft.com/ChannelMessage.Read.All'
@@ -213,9 +213,9 @@ TEAMS_CHAT_READ_SCOPE = 'https://graph.microsoft.com/Chat.Read'
 TEAMS_MEMBERS_READ_SCOPE = 'https://graph.microsoft.com/TeamMember.Read.All'
 ```
 
-### 6.2 동적 Scope 관리
+### 6.2 Dynamic Scope Management
 
-활성화된 도구에 따라 필요한 권한만 요청:
+Request only necessary permissions based on enabled tools:
 
 ```python
 TOOL_SCOPES_MAP = {
@@ -224,7 +224,7 @@ TOOL_SCOPES_MAP = {
 }
 
 def get_current_scopes():
-    """현재 활성화된 도구의 권한 반환"""
+    """Return permissions for currently enabled tools"""
     enabled_tools = _ENABLED_TOOLS or ['teams']
     scopes = BASE_SCOPES.copy()
     
@@ -232,33 +232,33 @@ def get_current_scopes():
         if tool in TOOL_SCOPES_MAP:
             scopes.extend(TOOL_SCOPES_MAP[tool])
     
-    return list(set(scopes))  # 중복 제거
+    return list(set(scopes))  # Remove duplicates
 ```
 
-## 7. 도구 시스템 분석
+## 7. Tool System Analysis
 
-### 7.1 Service Decorator 패턴
+### 7.1 Service Decorator Pattern
 
-모든 Teams API 도구는 `@require_teams_service` 데코레이터를 사용:
+All Teams API tools use the `@require_teams_service` decorator:
 
 ```python
 @server.tool()
 @require_teams_service("teams", "teams_read")
 async def list_teams(service, user_email: str) -> str:
-    """Teams 목록 조회"""
+    """List Teams"""
     teams_data = await service.get("/me/joinedTeams")
     return json.dumps(teams_data)
 ```
 
-**데코레이터 기능:**
-1. **인증 확인**: 사용자의 유효한 토큰 확인
-2. **권한 검증**: 필요한 Microsoft Graph API 권한 확인
-3. **서비스 주입**: 인증된 `TeamsGraphService` 객체 주입
-4. **에러 처리**: 인증 실패 시 적절한 오류 메시지 반환
+**Decorator Functions:**
+1. **Authentication Check**: Verify user's valid token
+2. **Permission Validation**: Check required Microsoft Graph API permissions
+3. **Service Injection**: Inject authenticated `TeamsGraphService` object
+4. **Error Handling**: Return appropriate error messages on authentication failure
 
-### 7.2 TeamsGraphService 클래스
+### 7.2 TeamsGraphService Class
 
-Microsoft Graph API 호출을 위한 HTTP 클라이언트:
+HTTP client for Microsoft Graph API calls:
 
 ```python
 class TeamsGraphService:
@@ -271,84 +271,84 @@ class TeamsGraphService:
         }
     
     async def get(self, endpoint: str) -> Dict[str, Any]:
-        """GET 요청"""
+        """GET request"""
         async with httpx.AsyncClient() as client:
             response = await client.get(f"{self.base_url}{endpoint}", headers=self.headers)
             response.raise_for_status()
             return response.json()
 ```
 
-## 8. 실제 도구 기능
+## 8. Actual Tool Features
 
-### 8.1 Teams 관리 도구
+### 8.1 Teams Management Tools
 
-- `list_teams()`: 사용자가 속한 Teams 목록
-- `list_channels()`: 특정 Team의 채널 목록
-- `get_team_info()`: Team 상세 정보
-- `list_team_members()`: Team 멤버 목록
+- `list_teams()`: List of Teams user belongs to
+- `list_channels()`: Channel list for specific Team
+- `get_team_info()`: Detailed Team information
+- `list_team_members()`: Team member list
 
-### 8.2 채팅 도구
+### 8.2 Chat Tools
 
-- `list_chats()`: 사용자의 채팅 목록
-- `get_chat_messages()`: 특정 채팅의 메시지
-- `send_message()`: 메시지 전송
+- `list_chats()`: User's chat list
+- `get_chat_messages()`: Messages from specific chat
+- `send_message()`: Send message
 
-### 8.3 검색 도구
+### 8.3 Search Tools
 
-- `search_messages()`: 메시지 검색
-- `search_teams()`: Teams 검색
-- `search_users()`: 사용자 검색
+- `search_messages()`: Message search
+- `search_teams()`: Teams search
+- `search_users()`: User search
 
-### 8.4 사용자 관리 도구
+### 8.4 User Management Tools
 
-- `get_user_profile()`: 사용자 프로필 조회
-- `list_users()`: 조직 내 사용자 목록
-- `get_user_presence()`: 사용자 현재 상태
+- `get_user_profile()`: User profile lookup
+- `list_users()`: Organization user list
+- `get_user_presence()`: User current status
 
-## 9. 보안 특징
+## 9. Security Features
 
-### 9.1 다중 계층 보안
+### 9.1 Multi-layer Security
 
-1. **OAuth 2.1 표준 준수**: 최신 OAuth 보안 기준 적용
-2. **PKCE 지원**: Code Challenge를 통한 중간자 공격 방지
-3. **세션 바인딩**: 세션 하이재킹 방지
-4. **토큰 검증**: JWT 토큰 기반 사용자 인증
-5. **권한 분리**: 사용자별 크리덴셜 격리
+1. **OAuth 2.1 Standard Compliance**: Latest OAuth security standards applied
+2. **PKCE Support**: Prevents man-in-the-middle attacks through Code Challenge
+3. **Session Binding**: Prevents session hijacking
+4. **Token Validation**: JWT token-based user authentication
+5. **Permission Separation**: User-specific credential isolation
 
-### 9.2 Single-User 모드
+### 9.2 Single-User Mode
 
-개발 환경을 위한 단순화된 인증 모드:
+Simplified authentication mode for development environments:
 
 ```python
 def _find_any_credentials(base_dir: str) -> Optional[TeamsCredentials]:
-    """Single-user 모드에서 임의의 유효한 크리덴셜 사용"""
-    # 크리덴셜 디렉토리에서 첫 번째 유효한 크리덴셜 파일 로드
+    """Use any valid credentials in single-user mode"""
+    # Load first valid credential file from credentials directory
     for filename in os.listdir(base_dir):
         if filename.endswith(".json"):
-            # 크리덴셜 로드 및 반환
+            # Load and return credentials
             pass
 ```
 
-## 10. 환경 설정
+## 10. Environment Configuration
 
-### 10.1 필수 환경 변수
+### 10.1 Required Environment Variables
 
 ```bash
-# Microsoft OAuth 설정
+# Microsoft OAuth Settings
 MICROSOFT_OAUTH_CLIENT_ID=your_client_id
 MICROSOFT_OAUTH_CLIENT_SECRET=your_client_secret  
-MICROSOFT_TENANT_ID=common  # 또는 특정 테넌트 ID
+MICROSOFT_TENANT_ID=common  # or specific tenant ID
 
-# 서버 설정
+# Server Settings
 TEAMS_MCP_BASE_URI=http://localhost
 TEAMS_MCP_PORT=8003
 MICROSOFT_OAUTH_REDIRECT_URI=http://localhost:8003/callback
 
-# OAuth 2.1 활성화
+# OAuth 2.1 Activation
 MCP_ENABLE_OAUTH21=true
 ```
 
-### 10.2 Docker 배포
+### 10.2 Docker Deployment
 
 ```yaml
 services:
@@ -360,22 +360,22 @@ services:
       - teams_mcp_credentials:/app/.microsoft_teams_mcp/credentials
     environment:
       - MCP_ENABLE_OAUTH21=true
-      # ... 기타 환경 변수
+      # ... other environment variables
 ```
 
-## 11. 확장성 및 유지보수성
+## 11. Scalability and Maintainability
 
-### 11.1 모듈화 설계
+### 11.1 Modular Design
 
-- **인증 모듈**: 독립적인 OAuth 처리
-- **도구 모듈**: 각 기능별 별도 파일
-- **핵심 모듈**: 공통 기능 중앙화
-- **설정 모듈**: 환경별 설정 관리
+- **Authentication Module**: Independent OAuth handling
+- **Tool Modules**: Separate files for each functionality
+- **Core Modules**: Centralized common functionality
+- **Configuration Module**: Environment-specific configuration management
 
-### 11.2 로깅 및 모니터링
+### 11.2 Logging and Monitoring
 
 ```python
-# 상세 로깅 설정
+# Detailed logging configuration
 file_handler = logging.FileHandler('teams_mcp_server_debug.log')
 file_formatter = logging.Formatter(
     '%(asctime)s - %(name)s - %(levelname)s - %(process)d - %(threadName)s '
@@ -383,7 +383,7 @@ file_formatter = logging.Formatter(
 )
 ```
 
-**헬스체크 엔드포인트:**
+**Health Check Endpoint:**
 ```python
 @server.custom_route("/health", methods=["GET"])
 async def health_check(request: Request):
@@ -395,28 +395,28 @@ async def health_check(request: Request):
     })
 ```
 
-## 12. 성능 및 최적화
+## 12. Performance and Optimization
 
-### 12.1 비동기 처리
+### 12.1 Asynchronous Processing
 
-- **async/await**: 모든 I/O 작업에 비동기 처리 적용
-- **httpx.AsyncClient**: 비동기 HTTP 클라이언트 사용
-- **FastAPI**: 비동기 웹 프레임워크 기반
+- **async/await**: Applied asynchronous processing to all I/O operations
+- **httpx.AsyncClient**: Uses asynchronous HTTP client
+- **FastAPI**: Based on asynchronous web framework
 
-### 12.2 토큰 캐싱
+### 12.2 Token Caching
 
-- **메모리 캐싱**: 유효한 토큰을 메모리에 캐시
-- **자동 갱신**: 만료 전 자동 토큰 갱신
-- **영구 저장**: 재시작 시에도 세션 유지
+- **Memory Caching**: Cache valid tokens in memory
+- **Auto Refresh**: Automatic token renewal before expiration
+- **Persistent Storage**: Maintain sessions even after restart
 
-## 13. 결론
+## 13. Conclusion
 
-Microsoft Teams MCP Server는 OAuth 2.1 기반의 견고한 인증 시스템과 다중 사용자 세션 관리를 통해 안전하고 확장 가능한 Microsoft Teams 통합을 제공합니다. 
+The Microsoft Teams MCP Server provides secure and scalable Microsoft Teams integration through a robust OAuth 2.1-based authentication system and multi-user session management.
 
-**주요 강점:**
-- **보안**: 다중 계층 보안 검증
-- **확장성**: 모듈화된 아키텍처
-- **유연성**: 다중 transport 모드 지원
-- **신뢰성**: 자동 토큰 갱신 및 오류 처리
+**Key Strengths:**
+- **Security**: Multi-layer security validation
+- **Scalability**: Modular architecture
+- **Flexibility**: Support for multiple transport modes
+- **Reliability**: Automatic token renewal and error handling
 
-이 아키텍처는 엔터프라이즈 환경에서 안전하게 Microsoft Teams API를 활용할 수 있는 기반을 제공하며, 향후 추가 Microsoft 365 서비스 통합에도 확장 가능한 구조를 갖추고 있습니다.
+This architecture provides a foundation for safely utilizing Microsoft Teams API in enterprise environments and has an extensible structure for future integration with additional Microsoft 365 services.
