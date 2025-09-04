@@ -3,6 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    container_name: teams-mcp-server
     ports:
       - "${TEAMS_MCP_PORT:-8003}:8003"
     environment:
@@ -13,7 +14,7 @@ services:
       
       # Server Configuration
       - TEAMS_MCP_BASE_URI=${TEAMS_MCP_BASE_URI:-http://localhost}
-      - MICROSOFT_OAUTH_REDIRECT_URI=${MICROSOFT_OAUTH_REDIRECT_URI:-http://localhost:8003/oauth2callback}
+      - MICROSOFT_OAUTH_REDIRECT_URI=${MICROSOFT_OAUTH_REDIRECT_URI:-http://localhost:8003/callback}
       
       # OAuth 2.1 Settings
       - MCP_ENABLE_OAUTH21=true

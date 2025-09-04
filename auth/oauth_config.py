@@ -56,7 +56,7 @@ class OAuthConfig:
         explicit_uri = os.getenv("MICROSOFT_OAUTH_REDIRECT_URI")
         if explicit_uri:
             return explicit_uri
-        return f"{self.base_url}/oauth2callback"
+        return f"{self.base_url}/callback"
 
     def get_redirect_uris(self) -> List[str]:
         """

@@ -43,7 +43,7 @@ class MinimalOAuthServer:
     def _setup_callback_route(self):
         """Setup the OAuth callback route."""
 
-        @self.app.get("/oauth2callback")
+        @self.app.get("/callback")
         async def oauth_callback(request: Request):
             """Handle OAuth callback - same logic as in core/server.py"""
             state = request.query_params.get("state")

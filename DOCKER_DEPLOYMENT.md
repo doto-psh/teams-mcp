@@ -115,7 +115,7 @@ services:
       - "8000:8000"
     environment:
       - TEAMS_MCP_BASE_URI=https://yourdomain.com
-      - MICROSOFT_OAUTH_REDIRECT_URI=https://yourdomain.com/oauth2callback
+      - MICROSOFT_OAUTH_REDIRECT_URI=https://yourdomain.com/callback
       - OAUTH2_ALLOW_INSECURE_TRANSPORT=false
     volumes:
       - /path/to/persistent/credentials:/app/.microsoft_teams_mcp/credentials
@@ -132,8 +132,8 @@ services:
 Register your app in Azure with these settings:
 
 1. **Redirect URIs**: 
-   - `http://localhost:8000/oauth2callback` (development)
-   - `https://yourdomain.com/oauth2callback` (production)
+   - `http://localhost:8000/callback` (development)
+   - `https://yourdomain.com/callback` (production)
 
 2. **API Permissions**:
    - `User.Read`

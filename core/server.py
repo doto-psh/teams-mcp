@@ -99,7 +99,7 @@ async def health_check(request: Request):
         "transport": get_transport_mode()
     })
 
-@server.custom_route("/oauth2callback", methods=["GET"])
+@server.custom_route("/callback", methods=["GET"])
 async def oauth2_callback(request: Request) -> HTMLResponse:
     """Handle OAuth 2.0 callback from Microsoft."""
     logger.info("Received OAuth callback from Microsoft")

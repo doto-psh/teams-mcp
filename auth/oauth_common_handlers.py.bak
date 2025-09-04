@@ -326,7 +326,7 @@ async def handle_oauth_client_config(request: Request):
             "client_name": "Google Workspace MCP Server",
             "client_uri": config.base_url,
             "redirect_uris": [
-                f"{config.base_url}/oauth2callback",
+                f"{config.base_url}/callback",
                 "http://localhost:5173/auth/callback"
             ],
             "grant_types": ["authorization_code", "refresh_token"],

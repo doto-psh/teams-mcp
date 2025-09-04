@@ -105,7 +105,7 @@ def main():
     safe_print(f"   🌐 Transport: {args.transport}")
     if args.transport == 'streamable-http':
         safe_print(f"   🔗 URL: {base_uri}:{port}")
-        safe_print(f"   🔐 OAuth Callback: {base_uri}:{port}/oauth2callback")
+        safe_print(f"   🔐 OAuth Callback: {base_uri}:{port}/callback")
     safe_print(f"   👤 Mode: {'Single-user' if args.single_user else 'Multi-user'}")
     safe_print(f"   🐍 Python: {sys.version.split()[0]}")
     safe_print("")
@@ -185,7 +185,7 @@ def main():
             from auth.oauth_callback_server import ensure_oauth_callback_available
             success, error_msg = ensure_oauth_callback_available('stdio', port, base_uri)
             if success:
-                safe_print(f"   OAuth callback server started on {base_uri}:{port}/oauth2callback")
+                safe_print(f"   OAuth callback server started on {base_uri}:{port}/callback")
             else:
                 warning_msg = "   ⚠️  Warning: Failed to start OAuth callback server"
                 if error_msg:

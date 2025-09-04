@@ -59,7 +59,7 @@ sequenceDiagram
     Server->>MSAuth: Generate Auth URL + State
     Server->>Client: Return Auth URL
     Client->>MSAuth: User Authorization
-    MSAuth->>Server: GET /oauth2callback?code=...&state=...
+    MSAuth->>Server: GET /callback?code=...&state=...
     Server->>MSAuth: Exchange Code for Token
     MSAuth->>Server: Access Token + Refresh Token
     Server->>Server: Store in Session Store
@@ -137,7 +137,7 @@ def get_credentials_with_validation(
 
 **주요 엔드포인트:**
 - `GET /health`: 서버 상태 확인
-- `GET /oauth2callback`: OAuth 콜백 처리
+- `GET /callback`: OAuth 콜백 처리
 - `POST /start_auth`: 인증 흐름 시작
 - `POST /mcp/*`: MCP 도구 호출
 
@@ -342,7 +342,7 @@ MICROSOFT_TENANT_ID=common  # 또는 특정 테넌트 ID
 # 서버 설정
 TEAMS_MCP_BASE_URI=http://localhost
 TEAMS_MCP_PORT=8003
-MICROSOFT_OAUTH_REDIRECT_URI=http://localhost:8003/oauth2callback
+MICROSOFT_OAUTH_REDIRECT_URI=http://localhost:8003/callback
 
 # OAuth 2.1 활성화
 MCP_ENABLE_OAUTH21=true

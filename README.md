@@ -51,7 +51,7 @@ A Model Context Protocol (MCP) server for Microsoft Teams integration, adapted f
      - `ChannelMessage.Read.All`
      - `Chat.Read`
      - `User.Read`
-   - Set redirect URI: `http://localhost:8000/oauth2callback`
+   - Set redirect URI: `http://localhost:8000/callback`
 
 ### Configuration
 
