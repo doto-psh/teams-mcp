@@ -63,7 +63,8 @@ async def start_teams_auth(user_email: str) -> str:
             "redirect_uri": config.redirect_uri,
             "scope": " ".join(simplified_scopes),
             "state": state,
-            "response_mode": "query"
+            "response_mode": "query",
+            "prompt": "select_account"  # 항상 계정 선택 화면 표시
         }
         
         # Build query string manually
@@ -93,3 +94,86 @@ After authentication, you'll be redirected back to complete the setup.
     except Exception as e:
         logger.error(f"[start_teams_auth] Error: {e}")
         return f"❌ Error starting authentication: {str(e)}"
+
+@server.tool()
+async def logout_teams_auth(user_email: str) -> str:
+    """
+    Logout from Microsoft Teams by clearing stored credentials and session.
+    
+    Args:
+        user_email (str): The user's email address to logout.
+        
+    Returns:
+        str: Logout confirmation message.
+    """
+    logger.info(f"[logout_teams_auth] Logging out user: {user_email}")
+
+    try:
+        from auth.oauth21_session_store import get_oauth21_session_store
+        from auth.teams_auth import DEFAULT_CREDENTIALS_DIR
+        import os
+        import json
+        
+        store = get_oauth21_session_store()
+        
+        # Track what was cleared
+        cleared_items = []
+        
+        # 1. Clear from OAuth session store
+        with store._lock:
+            if user_email in store._sessions:
+                session_info = store._sessions[user_email]
+                mcp_session_id = session_info.get("mcp_session_id")
+                oauth_session_id = session_info.get("session_id")
+                
+                # Remove from sessions
+                del store._sessions[user_email]
+                cleared_items.append("OAuth session store")
+                
+                # Remove from session mappings
+                if mcp_session_id and mcp_session_id in store._mcp_session_mapping:
+                    del store._mcp_session_mapping[mcp_session_id]
+                    cleared_items.append("MCP session mapping")
+                
+                # Remove from auth bindings
+                if mcp_session_id and mcp_session_id in store._session_auth_binding:
+                    del store._session_auth_binding[mcp_session_id]
+                    cleared_items.append("MCP session binding")
+                
+                if oauth_session_id and oauth_session_id in store._session_auth_binding:
+                    del store._session_auth_binding[oauth_session_id]
+                    cleared_items.append("OAuth session binding")
+        
+        # 2. Clear from persistent credentials directory
+        credentials_dir = DEFAULT_CREDENTIALS_DIR
+        if credentials_dir and os.path.exists(credentials_dir):
+            for filename in os.listdir(credentials_dir):
+                if filename.endswith(".json"):
+                    filepath = os.path.join(credentials_dir, filename)
+                    try:
+                        with open(filepath, "r") as f:
+                            creds_data = json.load(f)
+                        
+                        # Check if this credentials file belongs to the user
+                        stored_email = creds_data.get("user_email") or creds_data.get("email")
+                        if stored_email == user_email:
+                            os.remove(filepath)
+                            cleared_items.append(f"Persistent credentials ({filename})")
+                            logger.info(f"Removed credentials file: {filepath}")
+                    except (IOError, json.JSONDecodeError) as e:
+                        logger.warning(f"Could not process credentials file {filepath}: {e}")
+        
+        if cleared_items:
+            cleared_list = "\n".join([f"• {item}" for item in cleared_items])
+            return f"""✅ Successfully logged out {user_email}
+
+            Cleared:
+            {cleared_list}
+
+            You can now authenticate as a different user or re-authenticate with the same account using the start_teams_auth tool."""
+        else:
+            return f"ℹ️ No active session found for {user_email}. User was already logged out."
+    
+    except Exception as e:
+        logger.error(f"[logout_teams] Error during logout: {e}")
+        return f"❌ Error during logout: {str(e)}"
