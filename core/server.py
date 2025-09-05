@@ -3,7 +3,7 @@ import os
 from typing import Optional
 from importlib import metadata
 
-from fastapi.responses import HTMLResponse, JSONResponse
+from starlette.responses import HTMLResponse, JSONResponse
 from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.middleware import Middleware
