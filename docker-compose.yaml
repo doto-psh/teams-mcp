@@ -34,11 +34,6 @@ services:
     
     networks:
       - default
-      - public-network
-
-networks:
-  public-network:
-    external: true
 
 volumes:
   teams_mcp_credentials:
